@@ -11,7 +11,6 @@ use PHPMailer\PHPMailer\Exception;
 set_time_limit(0);
 
 $urls = [
-	'https://wig.btbweb.com.ng',
 	'https://wigconference2023.nilds.gov.ng',
 	'https://democracyradio.ng',
 	'https://nilds.gov.ng/',
@@ -21,8 +20,7 @@ $urls = [
 	'https://current.ng/',
 	'https://www.c80.ng/',
 	'https://c80.io/',
-	'https://c80.io/',
-];
+	];
 
 $screenshotsDir = 'screenshots';
 
@@ -220,7 +218,24 @@ while (true) {
 		$responses[] = $result;
 	}
 
-	echo json_encode($responses) . "\n";
+	foreach ($responses as $response) {
+		echo 'URL: ' . $response['url'] . "\n";
+		echo 'Status: ' . $response['status'] . "\n";
+
+		if ($response['status'] !== 'No issues detected') {
+			echo 'Report File: ' . ($response['reportFile'] ?? 'N/A') . "\n";
+			echo 'HTML File Path: ' . ($response['htmlFilePath'] ?? 'N/A') . "\n";
+			echo 'Screenshot File Path: ' . ($response['screenshotFilePath'] ?? 'N/A') . "\n";
+		}
+
+		if (isset($response['error'])) {
+			echo 'Error: ' . $response['error'] . "\n";
+		}
+
+		echo "---------------------------------\n";
+	}
 
 	sleep(600);
+	#nohup php index.php > output.log 2>&1
 }
+
