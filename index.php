@@ -1,14 +1,18 @@
 <?php
 
-require_once './vendor/autoload.php';
+require_once __DIR__.'/vendor/autoload.php';
 
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
-    $dotenv->load();
-
+use Dotenv\Dotenv;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+
 set_time_limit(0);
+
+
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
 
 $urls = [
 	'https://wigconference2023.nilds.gov.ng',
@@ -22,7 +26,7 @@ $urls = [
 	'https://c80.io/',
 	];
 
-$screenshotsDir = 'screenshots';
+$screenshotsDir = __DIR__.'/screenshots';
 
 if (!file_exists($screenshotsDir)) {
 	mkdir($screenshotsDir, 0777, true);
@@ -86,28 +90,6 @@ function getHttpStatusMessage ($code): string
 	return $messages[$code] ?? 'Unknown Status';
 }
 
-function home_base_url (): string
-{
-	$base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') ? 'https://' : 'http://';
-	$tmpURL = dirname(__FILE__);
-	$tmpURL = str_replace(chr(92), '/', $tmpURL);
-	$tmpURL = str_replace($_SERVER['DOCUMENT_ROOT'], '', $tmpURL);
-	$tmpURL = ltrim($tmpURL, '/');
-
-	$tmpURL = rtrim($tmpURL, '/');
-
-	if (strpos($tmpURL, '/')) {
-		$tmpURL = explode('/', $tmpURL);
-		$tmpURL = $tmpURL[0];
-	}
-
-	if ($tmpURL !== $_SERVER['HTTP_HOST'])
-		$base_url .= $_SERVER['HTTP_HOST'] . '/' . $tmpURL . '/';
-	else
-		$base_url .= $tmpURL . '/';
-
-	return $base_url;
-}
 
 /**
  * @throws Exception
@@ -131,6 +113,8 @@ function takeScreenshot ($url): string
  */
 function monitorUrl ($url, $screenshotsDir): array
 {
+	print_r("Monitoring {$url} has started... \n");
+
 	$response = [
 		'url' => $url,
 		'status' => 'No issues detected'
@@ -153,24 +137,23 @@ function monitorUrl ($url, $screenshotsDir): array
 	curl_close($ch);
 
 	if ($httpCode >= 400) {
-		$htmlFilePath = 'page_content_' . date('Ymd_His') . '.html';
+		$htmlFilePath = __DIR__ .'/page_content_' . date('Ymd_His') . '.html';
 		file_put_contents($htmlFilePath, $htmlContent);
 
 		$screenshotName = takeScreenshot($url);
 		sleep(1);
 		$screenshotFilePath = $screenshotsDir . '/' . $screenshotName;
-		$screenshotFileUrl = home_base_url() . '/' . $screenshotFilePath;
 
-		$templateFilePath = 'report.html';
+		$templateFilePath = __DIR__.'/report.html';
 		$templateContent = file_get_contents($templateFilePath);
 
 		$reportContent = str_replace(
 			['{{url}}', '{{httpCode}}', '{{httpMessage}}', '{{timestamp}}', '{{contentLength}}', '{{downloadSpeed}}', '{{totalTime}}', '{{screenshotUrl}}'],
-			[$url, $httpCode, getHttpStatusMessage($httpCode), date('Y-m-d H:i:s'), ($contentLength ? number_format($contentLength) . ' bytes' : 'N/A'), ($downloadSpeed ? number_format($downloadSpeed) . ' bytes/sec' : 'N/A'), number_format($totalTime, 2) . ' seconds', $screenshotFileUrl],
+			[$url, $httpCode, getHttpStatusMessage($httpCode), date('Y-m-d H:i:s'), ($contentLength ? number_format($contentLength) . ' bytes' : 'N/A'), ($downloadSpeed ? number_format($downloadSpeed) . ' bytes/sec' : 'N/A'), number_format($totalTime, 2) . ' seconds', $screenshotName],
 			$templateContent
 		);
 
-		$reportFile = 'report_' . date('Ymd_His') . '.html';
+		$reportFile = __DIR__.'/report_' . date('Ymd_His') . '.html';
 		file_put_contents($reportFile, $reportContent);
 
 		$mail = new PHPMailer(true);
@@ -211,7 +194,7 @@ function monitorUrl ($url, $screenshotsDir): array
 	return $response;
 }
 
-while (true) {
+
 	$responses = [];
 	foreach ($urls as $url) {
 		$result = monitorUrl($url, $screenshotsDir);
@@ -234,8 +217,6 @@ while (true) {
 
 		echo "---------------------------------\n";
 	}
-
-	sleep(600);
 	#nohup php index.php > output.log 2>&1
-}
+
 
