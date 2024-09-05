@@ -1,4 +1,3 @@
-// screenshot.js
 const puppeteer = require("puppeteer");
 const path = require("path");
 
